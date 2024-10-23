@@ -1,36 +1,60 @@
-import React from "react";
-import { useNavigate } from "react-router-dom"; 
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { getForms, deleteForm } from "./actions/forms";
 
-import { Button, Typography, Box, IconButton } from "@mui/material";
+import {
+  Button,
+  Typography,
+  Box,
+  IconButton,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import AddIcon from "@mui/icons-material/Add";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
-const formData = [
-  {
-    id: 1,
-    title: "Customer Feedback",
-    description: "Collect feedback from customers about our services.",
-  },
-  {
-    id: 2,
-    title: "Event Registration",
-    description: "Register participants for the upcoming event.",
-  },
-  {
-    id: 3,
-    title: "Survey Form",
-    description: "General survey for product improvements.",
-  },
-];
-
 const App = () => {
-
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const [selectedForm, setSelectedForm] = useState(null); // Form to delete
+  const [openDialog, setOpenDialog] = useState(false);
+
+  const forms = useSelector((state) => state.forms); // Getting forms from the Redux store
+
+  React.useEffect(() => {
+    dispatch(getForms()); // Fetch all forms when the component loads
+  }, [dispatch]);
 
   const handleCreateNewForm = () => {
-    navigate("/create-new-form");  // Navigate to FormCreator component
+    navigate("/create-new-form"); // Navigate to FormCreator component
+  };
+
+  const handleEditForm = (formId) => {
+    navigate(`/create-new-form?id=${formId}`); // Pass formId as query param for editing
+  };
+
+  const handleDeleteForm = (form) => {
+    setSelectedForm(form); // Set the form to be deleted
+    setOpenDialog(true); // Open the dialog for confirmation
+  };
+
+  const handleConfirmDelete = () => {
+    if (selectedForm) {
+      dispatch(deleteForm(selectedForm._id)); // Call the action to delete the form
+    }
+    setOpenDialog(false); // Close the dialog
+  };
+
+  const handleCancelDelete = () => {
+    setOpenDialog(false); // Close the dialog without deleting
+    setSelectedForm(null); // Clear selected form
   };
 
   return (
@@ -86,9 +110,9 @@ const App = () => {
       <Box sx={{ marginTop: "16px" }}>
         {/* Show below UI on initial load */}
         {/* <Typography>No forms created.</Typography> */}
-        {formData.map((form) => (
+        {forms.map((form, index) => (
           <Grid
-            key={form.id}
+            key={form._id}
             container
             justifyContent="space-between"
             alignItems="center"
@@ -102,7 +126,7 @@ const App = () => {
               <Typography
                 variant="h6"
                 sx={{ fontSize: 22, fontWeight: 600 }}
-              >{`#${form.id} - ${form.title}`}</Typography>
+              >{`#${index + 1} - ${form.title}`}</Typography>
               <Typography variant="body2" color="textSecondary">
                 {form.description}
               </Typography>
@@ -110,16 +134,35 @@ const App = () => {
 
             {/* Right Side: Edit and Delete Icons */}
             <Box>
-              <IconButton color="gray">
+              <IconButton color="gray" onClick={() => handleEditForm(form._id)}>
                 <EditOutlinedIcon />
               </IconButton>
-              <IconButton color="gray">
+              <IconButton color="gray" onClick={() => handleDeleteForm(form)}>
                 <DeleteOutlineOutlinedIcon />
               </IconButton>
             </Box>
           </Grid>
         ))}
       </Box>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={openDialog} onClose={handleCancelDelete}>
+        <DialogTitle>Delete Form</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete the form titled{" "}
+            <strong>{selectedForm?.title}</strong>? This action cannot be
+            undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDelete} color="secondary">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
